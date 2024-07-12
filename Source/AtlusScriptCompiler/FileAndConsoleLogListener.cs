@@ -13,18 +13,18 @@ namespace AtlusScriptCompiler
 
         public FileAndConsoleLogListener(bool useColors, LogLevel filter) : base(useColors, LogLevel.All)
         {
-            mFileWriter = FileUtils.CreateText(Program.AssemblyName.Name + ".log");
+            //mFileWriter = FileUtils.CreateText(Program.AssemblyName.Name + ".log");
             mConsoleLogFilter = filter;
         }
 
         public FileAndConsoleLogListener(string channelName, bool useColors) : base(channelName, useColors)
         {
-            mFileWriter = FileUtils.CreateText(Program.AssemblyName.Name + ".log");
+            //mFileWriter = FileUtils.CreateText(Program.AssemblyName.Name + ".log");
         }
 
         protected override void OnLogCore(object sender, LogEventArgs e)
         {
-            mFileWriter.WriteLine($"{DateTime.Now} {e.ChannelName} {e.Level}: {e.Message}");
+            //mFileWriter.WriteLine($"{DateTime.Now} {e.ChannelName} {e.Level}: {e.Message}");
 
             if (mConsoleLogFilter.HasFlag(e.Level))
                 base.OnLogCore(sender, e);

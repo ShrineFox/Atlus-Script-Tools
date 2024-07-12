@@ -19,7 +19,7 @@ using System.Diagnostics;
 
 namespace AtlusScriptCompiler
 {
-    internal class Program
+    public class Program
     {
         public static AssemblyName AssemblyName = Assembly.GetExecutingAssembly().GetName();
         public static Version Version = AssemblyName.Version;
