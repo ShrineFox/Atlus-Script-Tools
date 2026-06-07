@@ -16,17 +16,17 @@ using FormatVersion = AtlusScriptLibrary.FlowScriptLanguage.FormatVersion;
 
 namespace AtlusScriptCompiler;
 
-internal class Program
+public class Program
 {
-    class MessageScriptOptions
+    public class MessageScriptOptions
     {
-        public MessageScriptBinaryVariant BinaryVariant { get; set; }
-        public string? EncodingName { get; set; }
-        public Encoding? Encoding { get; set; }
-        public bool? OmitUnusedFunctions { get; set; }
+        public static MessageScriptBinaryVariant BinaryVariant { get; set; }
+        public static string? EncodingName { get; set; }
+        public static Encoding? Encoding { get; set; }
+        public static bool? OmitUnusedFunctions { get; set; }
     }
 
-    class FlowScriptOptions
+    public class FlowScriptOptions
     {
         // Flow Script Tracing Options
         public bool EnableProcedureTracing { get; set; }
@@ -42,31 +42,30 @@ internal class Program
         public bool GotoOnly { get; set; }
     }
 
-    class UnrealEngineOptions
+    public class UnrealEngineOptions
     {
         public bool Wrapped { get; set; } 
-        public string? PatchFile { get; set; }
+        public static string? PatchFile { get; set; }
     }
 
-    class ProgramOptions
+    public class ProgramOptions
     {
         // File Paths
-        public string? InputFilePath { get; set; }
-        public InputFileFormat InputFileFormat { get; set; }
-        public string? OutputFilePath { get; set; }
-        public OutputFileFormat OutputFileFormat { get; set; }
+        public static string? InputFilePath { get; set; }
+        public static InputFileFormat InputFileFormat { get; set; }
+        public static string? OutputFilePath { get; set; }
+        public static OutputFileFormat OutputFileFormat { get; set; }
 
         public string? LibraryName { get; set; }
-        public bool LogTrace { get; set; }
+        public static bool LogTrace { get; set; }
         public bool Matching { get; set; }
 
         // Actions
-        public bool DoCompile { get; set; }
-        public bool DoDecompile { get; set; } 
-        public bool DoDisassemble { get; set; } 
-        public bool DoDiff { get; set; }
-        public bool IsActionAssigned
-            => DoCompile || DoDecompile || DoDisassemble || DoDiff;
+        public static bool DoCompile { get; set; }
+        public static bool DoDecompile { get; set; } 
+        public static bool DoDisassemble { get; set; } 
+        public static bool DoDiff { get; set; }
+        public static bool IsActionAssigned { get; set; }
 
         // Message Script Configuration
         public MessageScriptOptions MessageScript { get; set; } = new();
@@ -78,7 +77,7 @@ internal class Program
         public UnrealEngineOptions UnrealEngine { get; set; } = new();
     }
 
-    static class ExitCode
+    public static class ExitCode
     {
         public static readonly int Success = 0;
         public static readonly int Error = 1;
@@ -86,12 +85,12 @@ internal class Program
     }
 
     public static AssemblyName AssemblyName = Assembly.GetExecutingAssembly().GetName();
-    static Version Version = AssemblyName.Version;
-    static Logger Logger = new Logger(nameof(AtlusScriptCompiler));
-    static LogListener Listener = new FileAndConsoleLogListener(true, LogLevel.Info | LogLevel.Warning | LogLevel.Error | LogLevel.Fatal);
-    static ProgramOptions Options = new();
+    public static Version Version = AssemblyName.Version;
+    public static Logger Logger = new Logger(nameof(AtlusScriptCompiler));
+    public static LogListener Listener = new FileAndConsoleLogListener(true, LogLevel.Info | LogLevel.Warning | LogLevel.Error | LogLevel.Fatal);
+    public static ProgramOptions Options = new();
 
-    private static void DisplayUsage()
+    public static void DisplayUsage()
     {
         Console.WriteLine($"AtlusScriptCompiler {Version.Major}.{Version.Minor}-{ThisAssembly.Git.Commit} ({ThisAssembly.Git.CommitDate})");
         Console.WriteLine();
@@ -200,7 +199,12 @@ internal class Program
         Console.WriteLine();
     }
 
-    public static int Main(string[] args)
+    public static void Main(string[] args)
+    {
+        RunCompiler(args);
+    }
+
+    public static bool RunCompiler(string[] args)
     {
         try
         {
@@ -209,14 +213,14 @@ internal class Program
         catch (Exception ex)
         {
             LogException($"Failed to load libraries", ex);
-            return ExitCode.Error;
+            return false;
         }
 
         if (args.Length == 0)
         {
             Logger.Error("No arguments specified!");
             DisplayUsage();
-            return ExitCode.InvalidArguments;
+            return false;
         }
 
         // Set up log listener
@@ -229,10 +233,10 @@ internal class Program
         {
             Logger.Error("Failed to parse arguments!");
             DisplayUsage();
-            return ExitCode.InvalidArguments;
+            return false;
         }
 
-        if (Options.LogTrace)
+        if (ProgramOptions.LogTrace)
             Listener.Filter |= LogLevel.Trace;
 
         bool success;
@@ -245,19 +249,19 @@ internal class Program
             {
                 success = UEWrapperHandler();
             }
-            if (Options.DoCompile)
+            if (ProgramOptions.DoCompile)
             {
                 success = TryDoCompilation();
             }
-            else if (Options.DoDecompile)
+            else if (ProgramOptions.DoDecompile)
             {
                 success = TryDoDecompilation();
             }
-            else if (Options.DoDisassemble)
+            else if (ProgramOptions.DoDisassemble)
             {
                 success = TryDoDisassembling();
             }
-            else if (Options.DoDiff)
+            else if (ProgramOptions.DoDiff)
             {
                 success = TryDoDiff();
             }
@@ -265,19 +269,19 @@ internal class Program
             {
                 Logger.Error("No compilation, decompilation or disassemble instruction given!");
                 DisplayUsage();
-                return ExitCode.InvalidArguments;
+                return false;
             }
-            if (success && Options.UnrealEngine.PatchFile != null)
+            if (success && UnrealEngineOptions.PatchFile != null)
             {
-                if (Options.DoCompile)
+                if (ProgramOptions.DoCompile)
                 {
-                    success = UEWrapper.WrapAsset(Options.OutputFilePath, Options.UnrealEngine.PatchFile);
+                    success = UEWrapper.WrapAsset(ProgramOptions.OutputFilePath, UnrealEngineOptions.PatchFile);
                 }
                 else
                 {
                     Logger.Error("Patch file can only be used on compilation");
                     DisplayUsage();
-                    return ExitCode.InvalidArguments;
+                    return false;
                 }
             }
         }
@@ -298,7 +302,7 @@ internal class Program
             Logger.Error("One or more errors occured while executing task!");
 
         Console.ForegroundColor = ConsoleColor.Gray;
-        return success ? ExitCode.Success : ExitCode.Error;
+        return success;
     }
 
     private static bool TryParseArguments(string[] args)
@@ -317,7 +321,7 @@ internal class Program
                         return false;
                     }
 
-                    Options.InputFilePath = args[++i];
+                    ProgramOptions.InputFilePath = args[++i];
                     break;
 
                 case "-InFormat":
@@ -332,7 +336,7 @@ internal class Program
                         Logger.Error("Invalid input file format specified");
                         return false;
                     }
-                    Options.InputFileFormat = inputFileFormat;
+                    ProgramOptions.InputFileFormat = inputFileFormat;
 
                     break;
 
@@ -343,7 +347,7 @@ internal class Program
                         return false;
                     }
 
-                    Options.OutputFilePath = args[++i];
+                    ProgramOptions.OutputFilePath = args[++i];
                     break;
 
                 case "-OutFormat":
@@ -358,47 +362,47 @@ internal class Program
                         Logger.Error("Invalid output file format specified");
                         return false;
                     }
-                    Options.OutputFileFormat = outputFileFormat;
+                    ProgramOptions.OutputFileFormat = outputFileFormat;
 
                     break;
 
                 case "-Compile":
-                    if (Options.IsActionAssigned)
+                    if (ProgramOptions.IsActionAssigned)
                     {
                         Logger.Error("Attempted to assign compilation action while another action is already assigned.");
                         return false;
                     }
 
-                    Options.DoCompile = true;
+                    ProgramOptions.DoCompile = true;
                     break;
 
                 case "-Decompile":
-                    if (Options.IsActionAssigned)
+                    if (ProgramOptions.IsActionAssigned)
                     {
                         Logger.Error("Attempted to assign decompilation action while another action is already assigned.");
                         return false;
                     }
 
-                    Options.DoDecompile = true;
+                    ProgramOptions.DoDecompile = true;
                     break;
 
                 case "-Disassemble":
-                    if (Options.IsActionAssigned)
+                    if (ProgramOptions.IsActionAssigned)
                     {
                         Logger.Error("Attempted to assign disassembly action while another action is already assigned.");
                         return false;
                     }
 
-                    Options.DoDisassemble = true;
+                    ProgramOptions.DoDisassemble = true;
                     break;
 
                 case "-Diff":
-                    if (Options.IsActionAssigned)
+                    if (ProgramOptions.IsActionAssigned)
                     {
                         Logger.Error("Attempted to assign diff action while another action is already assigned.");
                         return false;
                     }
-                    Options.DoDiff = true;
+                    ProgramOptions.DoDiff = true;
                     break;
 
                 case "-Library":
@@ -412,7 +416,7 @@ internal class Program
                     break;
 
                 case "-LogTrace":
-                    Options.LogTrace = true;
+                    ProgramOptions.LogTrace = true;
                     break;
 
                 case "-Matching":
@@ -427,49 +431,49 @@ internal class Program
                         return false;
                     }
 
-                    Options.MessageScript.EncodingName = args[++i];
+                    MessageScriptOptions.EncodingName = args[++i];
 
-                    switch (Options.MessageScript.EncodingName.ToLower())
+                    switch (MessageScriptOptions.EncodingName.ToLower())
                     {
                         case "ascii":
-                            Options.MessageScript.Encoding = Encoding.ASCII;
+                            MessageScriptOptions.Encoding = Encoding.ASCII;
                             break;
                         case "sj":
                         case "shiftjis":
                         case "shift-jis":
-                            Options.MessageScript.Encoding = ShiftJISEncoding.Instance;
+                            MessageScriptOptions.Encoding = ShiftJISEncoding.Instance;
                             break;
                         case "ut":
                         case "utf-8":
-                            Options.MessageScript.Encoding = Encoding.UTF8;
+                            MessageScriptOptions.Encoding = Encoding.UTF8;
                             break;
                         case "unicode":
                         case "utf-16":
-                            Options.MessageScript.Encoding = Encoding.Unicode;
+                            MessageScriptOptions.Encoding = Encoding.Unicode;
                             break;
                         case "utf-16-be":
-                            Options.MessageScript.Encoding = Encoding.BigEndianUnicode;
+                            MessageScriptOptions.Encoding = Encoding.BigEndianUnicode;
                             break;
                         case "cat":
-                            Options.MessageScript.Encoding = CatherineEncoding.Instance;
+                            MessageScriptOptions.Encoding = CatherineEncoding.Instance;
                             break;
                         case "cfb":
-                            Options.MessageScript.Encoding = CatherineFullBodyEncoding.Instance;
+                            MessageScriptOptions.Encoding = CatherineFullBodyEncoding.Instance;
                             break;
                         default:
                             try
                             {
-                                Options.MessageScript.Encoding = AtlusEncoding.Create(Options.MessageScript.EncodingName);
+                                MessageScriptOptions.Encoding = AtlusEncoding.Create(MessageScriptOptions.EncodingName);
                             }
                             catch (ArgumentException)
                             {
-                                Logger.Error($"Unknown encoding: {Options.MessageScript.EncodingName}");
+                                Logger.Error($"Unknown encoding: {MessageScriptOptions.EncodingName}");
                                 return false;
                             }
                             break;
                     }
 
-                    Logger.Info($"Using {Options.MessageScript.EncodingName} encoding");
+                    Logger.Info($"Using {MessageScriptOptions.EncodingName} encoding");
                     break;
 
                 case "-TraceProcedure":
@@ -503,7 +507,7 @@ internal class Program
                         return false;
                     }
 
-                    Options.UnrealEngine.PatchFile = args[++i];
+                    UnrealEngineOptions.PatchFile = args[++i];
                     break;
 
                 case "-OverwriteMessages":
@@ -516,47 +520,47 @@ internal class Program
             }
         }
 
-        if (Options.InputFilePath == null)
+        if (ProgramOptions.InputFilePath == null)
         {
-            Options.InputFilePath = args[0];
+            ProgramOptions.InputFilePath = args[0];
         }
 
-        if (!File.Exists(Options.InputFilePath))
+        if (!File.Exists(ProgramOptions.InputFilePath))
         {
-            Logger.Error($"Specified input file doesn't exist! ({Options.InputFilePath})");
+            Logger.Error($"Specified input file doesn't exist! ({ProgramOptions.InputFilePath})");
             return false;
         }
 
-        if (Options.InputFileFormat == InputFileFormat.None)
+        if (ProgramOptions.InputFileFormat == InputFileFormat.None)
         {
-            var extension = Path.GetExtension(Options.InputFilePath);
+            var extension = Path.GetExtension(ProgramOptions.InputFilePath);
 
             switch (extension.ToLowerInvariant())
             {
                 case ".bf":
-                    Options.InputFileFormat = InputFileFormat.FlowScriptBinary;
+                    ProgramOptions.InputFileFormat = InputFileFormat.FlowScriptBinary;
                     break;
 
                 case ".flow":
-                    Options.InputFileFormat = InputFileFormat.FlowScriptTextSource;
+                    ProgramOptions.InputFileFormat = InputFileFormat.FlowScriptTextSource;
                     break;
 
                 case ".flowasm":
-                    Options.InputFileFormat = InputFileFormat.FlowScriptAssemblerSource;
+                    ProgramOptions.InputFileFormat = InputFileFormat.FlowScriptAssemblerSource;
                     break;
 
                 case ".bmd":
-                    Options.InputFileFormat = InputFileFormat.MessageScriptBinary;
-                    Options.MessageScript.BinaryVariant = MessageScriptBinaryVariant.BMD;
+                    ProgramOptions.InputFileFormat = InputFileFormat.MessageScriptBinary;
+                    MessageScriptOptions.BinaryVariant = MessageScriptBinaryVariant.BMD;
                     break;
 
                 case ".bm2":
-                    Options.InputFileFormat = InputFileFormat.MessageScriptBinary;
-                    Options.MessageScript.BinaryVariant = MessageScriptBinaryVariant.BM2;
+                    ProgramOptions.InputFileFormat = InputFileFormat.MessageScriptBinary;
+                    MessageScriptOptions.BinaryVariant = MessageScriptBinaryVariant.BM2;
                     break;
 
                 case ".msg":
-                    Options.InputFileFormat = InputFileFormat.MessageScriptTextSource;
+                    ProgramOptions.InputFileFormat = InputFileFormat.MessageScriptTextSource;
                     break;
 
                 case ".uasset":
@@ -569,13 +573,13 @@ internal class Program
             }
         }
 
-        if (Options.InputFileFormat == InputFileFormat.MessageScriptTextSource &&
-            (Options.OutputFileFormat == OutputFileFormat.V3 || Options.OutputFileFormat == OutputFileFormat.V3BE))
+        if (ProgramOptions.InputFileFormat == InputFileFormat.MessageScriptTextSource &&
+            (ProgramOptions.OutputFileFormat == OutputFileFormat.V3 || ProgramOptions.OutputFileFormat == OutputFileFormat.V3BE))
         {
-            Options.MessageScript.BinaryVariant = MessageScriptBinaryVariant.BM2;
+            MessageScriptOptions.BinaryVariant = MessageScriptBinaryVariant.BM2;
         }
 
-        if (Path.GetExtension(Options.InputFilePath).ToLowerInvariant().Equals(".uasset"))
+        if (Path.GetExtension(ProgramOptions.InputFilePath).ToLowerInvariant().Equals(".uasset"))
         {
             Options.UnrealEngine.Wrapped = true;
         }
@@ -584,18 +588,18 @@ internal class Program
             Options.UnrealEngine.Wrapped = false;
         }
 
-        if (!Options.IsActionAssigned)
+        if (!ProgramOptions.IsActionAssigned)
         {
             // Decide on default action based on input file format
-            switch (Options.InputFileFormat)
+            switch (ProgramOptions.InputFileFormat)
             {
                 case InputFileFormat.FlowScriptBinary:
                 case InputFileFormat.MessageScriptBinary:
-                    Options.DoDecompile = true;
+                    ProgramOptions.DoDecompile = true;
                     break;
                 case InputFileFormat.FlowScriptTextSource:
                 case InputFileFormat.MessageScriptTextSource:
-                    Options.DoCompile = true;
+                    ProgramOptions.DoCompile = true;
                     break;
                 default:
                     Logger.Error("No compilation, decompilation or disassemble instruction given!");
@@ -603,58 +607,58 @@ internal class Program
             }
         }
 
-        if (Options.OutputFilePath == null)
+        if (ProgramOptions.OutputFilePath == null)
         {
-            if (Options.DoCompile)
+            if (ProgramOptions.DoCompile)
             {
-                switch (Options.InputFileFormat)
+                switch (ProgramOptions.InputFileFormat)
                 {
                     case InputFileFormat.FlowScriptTextSource:
                     case InputFileFormat.FlowScriptAssemblerSource:
-                        Options.OutputFilePath = Options.InputFilePath + ".bf";
+                        ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + ".bf";
                         break;
                     case InputFileFormat.MessageScriptTextSource:
-                        if (Options.MessageScript.BinaryVariant == MessageScriptBinaryVariant.BMD)
-                            Options.OutputFilePath = Options.InputFilePath + ".bmd";
-                        else if (Options.MessageScript.BinaryVariant == MessageScriptBinaryVariant.BM2)
-                            Options.OutputFilePath = Options.InputFilePath + ".bm2";
+                        if (MessageScriptOptions.BinaryVariant == MessageScriptBinaryVariant.BMD)
+                            ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + ".bmd";
+                        else if (MessageScriptOptions.BinaryVariant == MessageScriptBinaryVariant.BM2)
+                            ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + ".bm2";
                         break;
                 }
             }
-            else if (Options.DoDecompile)
+            else if (ProgramOptions.DoDecompile)
             {
-                switch (Options.InputFileFormat)
+                switch (ProgramOptions.InputFileFormat)
                 {
                     case InputFileFormat.FlowScriptBinary:
-                        Options.OutputFilePath = Options.InputFilePath + ".flow";
+                        ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + ".flow";
                         break;
                     case InputFileFormat.MessageScriptBinary:
-                        Options.OutputFilePath = Options.InputFilePath + ".msg";
+                        ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + ".msg";
                         break;
                 }
             }
-            else if (Options.DoDisassemble)
+            else if (ProgramOptions.DoDisassemble)
             {
-                switch (Options.InputFileFormat)
+                switch (ProgramOptions.InputFileFormat)
                 {
                     case InputFileFormat.FlowScriptBinary:
-                        Options.OutputFilePath = Options.InputFilePath + ".flowasm";
+                        ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + ".flowasm";
                         break;
                 }
             }
         }
 
         if (!Options.UnrealEngine.Wrapped) 
-            Logger.Info($"Output file path is set to {Options.OutputFilePath}");
+            Logger.Info($"Output file path is set to {ProgramOptions.OutputFilePath}");
 
-        if (Options.DoDiff)
+        if (ProgramOptions.DoDiff)
         {
             Options.Matching = true;
         }
 
         if (Options.Matching)
         {
-            Options.MessageScript.OmitUnusedFunctions = false;
+            MessageScriptOptions.OmitUnusedFunctions = false;
             Options.FlowScript.KeepLocalVariableIndices = true;
         }
 
@@ -663,25 +667,25 @@ internal class Program
 
     private static bool TryDoCompilation()
     {
-        switch (Options.InputFileFormat)
+        switch (ProgramOptions.InputFileFormat)
         {
             case InputFileFormat.FlowScriptTextSource:
             case InputFileFormat.FlowScriptAssemblerSource:
                 return TryDoFlowScriptCompilation(
-                    Options.InputFilePath,
-                    Options.OutputFilePath,
-                    Options.OutputFileFormat,
+                    ProgramOptions.InputFilePath,
+                    ProgramOptions.OutputFilePath,
+                    ProgramOptions.OutputFileFormat,
                     Options.LibraryName,
                     Options.FlowScript,
-                    Options.MessageScript);
+                    new MessageScriptOptions());
 
             case InputFileFormat.MessageScriptTextSource:
                 return TryDoMessageScriptCompilation(
-                    Options.InputFilePath,
-                    Options.OutputFilePath,
-                    Options.OutputFileFormat,
+                    ProgramOptions.InputFilePath,
+                    ProgramOptions.OutputFilePath,
+                    ProgramOptions.OutputFileFormat,
                     Options.LibraryName,
-                    Options.MessageScript);
+                    new MessageScriptOptions());
 
             case InputFileFormat.FlowScriptBinary:
             case InputFileFormat.MessageScriptBinary:
@@ -715,7 +719,7 @@ internal class Program
         // Compile source
         var compiler = new FlowScriptCompiler(version);
         compiler.AddListener(Listener);
-        compiler.Encoding = messageScriptOptions.Encoding;
+        compiler.Encoding = MessageScriptOptions.Encoding;
         compiler.EnableProcedureTracing = flowScriptOptions.EnableProcedureTracing;
         compiler.EnableProcedureCallTracing = flowScriptOptions.EnableProcedureCallTracing;
         compiler.EnableFunctionCallTracing = flowScriptOptions.EnableFunctionCallTracing;
@@ -855,7 +859,7 @@ internal class Program
             return false;
         }
 
-        var compiler = new MessageScriptCompiler(version, messageScriptOptions.Encoding);
+        var compiler = new MessageScriptCompiler(version, MessageScriptOptions.Encoding);
         compiler.AddListener(Listener);
 
         if (libraryName != null)
@@ -975,7 +979,7 @@ internal class Program
 
     private static bool TryDoDecompilation()
     {
-        switch (Options.InputFileFormat)
+        switch (ProgramOptions.InputFileFormat)
         {
             case InputFileFormat.FlowScriptTextSource:
             case InputFileFormat.FlowScriptAssemblerSource:
@@ -985,20 +989,20 @@ internal class Program
 
             case InputFileFormat.FlowScriptBinary:
                 return TryDoFlowScriptDecompilation(
-                    Options.InputFilePath,
-                    Options.OutputFilePath,
+                    ProgramOptions.InputFilePath,
+                    ProgramOptions.OutputFilePath,
                     Options.LibraryName,
                     Options.FlowScript,
-                    Options.MessageScript,
+                    new MessageScriptOptions(),
                     out _);
 
             case InputFileFormat.MessageScriptBinary:
                 return TryDoMessageScriptDecompilation(
-                    Options.InputFilePath,
-                    Options.OutputFilePath,
-                    Options.OutputFileFormat,
+                    ProgramOptions.InputFilePath,
+                    ProgramOptions.OutputFilePath,
+                    ProgramOptions.OutputFileFormat,
                     Options.LibraryName,
-                    Options.MessageScript);
+                    new MessageScriptOptions());
 
             default:
                 Logger.Error("Invalid input file format!");
@@ -1018,7 +1022,7 @@ internal class Program
         outputFileFormat = OutputFileFormat.None;
         Logger.Info("Loading binary FlowScript file...");
         FlowScript flowScript = null;
-        if (!TryPerformAction("Failed to load flow script from file", () => flowScript = FlowScript.FromFile(inputFilePath, messageScriptOptions.Encoding)))
+        if (!TryPerformAction("Failed to load flow script from file", () => flowScript = FlowScript.FromFile(inputFilePath, MessageScriptOptions.Encoding)))
             return false;
 
         Logger.Info("Decompiling FlowScript...");
@@ -1027,7 +1031,7 @@ internal class Program
         decompiler.SumBits = flowScriptOptions.SumBits;
         decompiler.KeepLocalVariableIndices = flowScriptOptions.KeepLocalVariableIndices;
         decompiler.GotoOnly = flowScriptOptions.GotoOnly;
-        decompiler.MessageScriptOmitUnusedFunctions = messageScriptOptions.OmitUnusedFunctions;
+        decompiler.MessageScriptOmitUnusedFunctions = MessageScriptOptions.OmitUnusedFunctions;
         decompiler.AddListener(Listener);
 
         if (libraryName != null)
@@ -1068,7 +1072,7 @@ internal class Program
         MessageScript script = null;
         var format = GetMessageScriptFormatVersion(outputFileFormat);
 
-        if (!TryPerformAction("Failed to load message script from file.", () => script = MessageScript.FromFile(inputFilePath, format, messageScriptOptions.Encoding)))
+        if (!TryPerformAction("Failed to load message script from file.", () => script = MessageScript.FromFile(inputFilePath, format, MessageScriptOptions.Encoding)))
             return false;
 
         Logger.Info("Decompiling MessageScript...");
@@ -1089,7 +1093,7 @@ internal class Program
                     decompiler.Library = library;
                 }
 
-                decompiler.OmitUnusedFunctions = messageScriptOptions.OmitUnusedFunctions.GetValueOrDefault(decompiler.OmitUnusedFunctions);
+                decompiler.OmitUnusedFunctions = MessageScriptOptions.OmitUnusedFunctions.GetValueOrDefault(decompiler.OmitUnusedFunctions);
                 decompiler.Decompile(script);
             }
         }))
@@ -1107,7 +1111,7 @@ internal class Program
 
     private static bool TryDoDiff()
     {
-        switch (Options.InputFileFormat)
+        switch (ProgramOptions.InputFileFormat)
         {
             case InputFileFormat.FlowScriptTextSource:
             case InputFileFormat.FlowScriptAssemblerSource:
@@ -1116,10 +1120,10 @@ internal class Program
                 return false;
             case InputFileFormat.FlowScriptBinary:
                 return TryDoFlowScriptDiff(
-                    Options.InputFilePath,
+                    ProgramOptions.InputFilePath,
                     Options.LibraryName,
                     Options.FlowScript,
-                    Options.MessageScript);
+                    new MessageScriptOptions());
             case InputFileFormat.MessageScriptBinary:
                 return TryDoMessageScriptDiff();
             default:
@@ -1159,7 +1163,7 @@ internal class Program
 
     private static bool TryDoDisassembling()
     {
-        switch (Options.InputFileFormat)
+        switch (ProgramOptions.InputFileFormat)
         {
             case InputFileFormat.FlowScriptTextSource:
             case InputFileFormat.FlowScriptAssemblerSource:
@@ -1168,7 +1172,7 @@ internal class Program
                 return false;
 
             case InputFileFormat.FlowScriptBinary:
-                return TryDoFlowScriptDisassembly(Options.InputFilePath, Options.OutputFilePath);
+                return TryDoFlowScriptDisassembly(ProgramOptions.InputFilePath, ProgramOptions.OutputFilePath);
 
             case InputFileFormat.MessageScriptBinary:
                 Logger.Info("Error. Disassembling message scripts is not supported.");
@@ -1244,18 +1248,18 @@ internal class Program
     private static bool UEWrapperHandler()
     {
         bool success = false;
-        using (var unwrapper = File.Open(Options.InputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+        using (var unwrapper = File.Open(ProgramOptions.InputFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
             UEWrapper.UnwrapAsset(
-                Path.GetDirectoryName(Options.InputFilePath), 
-                Path.GetFileNameWithoutExtension(Options.InputFilePath), 
-                GetInputFileExtensionByFileFormat(Options.InputFileFormat, Options.MessageScript.BinaryVariant), 
+                Path.GetDirectoryName(ProgramOptions.InputFilePath), 
+                Path.GetFileNameWithoutExtension(ProgramOptions.InputFilePath), 
+                GetInputFileExtensionByFileFormat(ProgramOptions.InputFileFormat, MessageScriptOptions.BinaryVariant), 
                 unwrapper, 
                 out var outName);
-            Options.InputFilePath = outName;
-            Options.OutputFilePath = Options.InputFilePath + GetOutputFileExtensionByFileFormat(Options.InputFileFormat, Options.MessageScript.BinaryVariant, Options.DoDecompile);
-            Logger.Info($"Input file path is set to {Options.InputFilePath}");
-            Logger.Info($"Output file path is set to {Options.OutputFilePath}");
+            ProgramOptions.InputFilePath = outName;
+            ProgramOptions.OutputFilePath = ProgramOptions.InputFilePath + GetOutputFileExtensionByFileFormat(ProgramOptions.InputFileFormat, MessageScriptOptions.BinaryVariant, ProgramOptions.DoDecompile);
+            Logger.Info($"Input file path is set to {ProgramOptions.InputFilePath}");
+            Logger.Info($"Output file path is set to {ProgramOptions.OutputFilePath}");
 }
         return success;
     }

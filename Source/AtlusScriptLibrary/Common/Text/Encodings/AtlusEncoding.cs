@@ -232,7 +232,7 @@ public class AtlusEncoding : Encoding
         return sCache[tableName] = new AtlusEncoding(tableName);
     }
 
-    private AtlusEncoding(string tableName)
+    public AtlusEncoding(string tableName)
     {
         EncodingName = tableName;
         var tableFilePath = Path.Combine(sCharsetsBaseDirectoryPath, $"{tableName}.tsv");
